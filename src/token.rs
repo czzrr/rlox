@@ -41,7 +41,13 @@ impl ToString for Literal {
         match self {
             Id(s) | Str(s) => s.to_owned(),
             Bool(b) => b.to_string(),
-            Double(n) => n.to_string(),
+            Double(n) => {
+                let mut text = n.to_string();
+                if text.ends_with(".0") {
+                    text = text[0..text.len() - 2].to_owned();
+                }
+                text
+            }
             Nil => "nil".to_owned(),
         }
     }
