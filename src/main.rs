@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::{path::Path, io::Write};
 
-use rlox::{error_handler::ErrorHandler, scanner::Scanner};
+use rlox::{error_handler::ErrorHandler, scanner::Scanner, parser::Parser, ast_printer};
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
@@ -26,6 +26,7 @@ fn run_file(path: impl AsRef<Path>) -> std::io::Result<()> {
 fn run_prompt() -> std::io::Result<()> {
     loop {
         print!("> ");
+        std::io::stdout().flush()?;
         let mut line = String::new();
         std::io::stdin().read_line(&mut line)?;
         if line.is_empty() {
@@ -40,11 +41,20 @@ fn run_prompt() -> std::io::Result<()> {
 fn run(source: String) -> Result<(), ()> {
     let mut error_handler = ErrorHandler::new();
     let mut scanner = Scanner::new(source, &mut error_handler);
-    let tokens = scanner.scan_tokens();
+    let tokens = scanner.scan_tokens().to_owned();
+    let mut parser = Parser::new(tokens.to_owned());
+    let expr = parser.parse(&mut error_handler);
 
-    for token in tokens {
-        println!("{}", token);
+    // for token in tokens {
+    //     println!("{}", token);
+    // }
+    
+    if let Some(expr) = expr {
+        println!("{}", ast_printer::print(expr.as_ref()));
+    } else {
+        println!("{:?}", expr);
     }
+    
 
     Ok(())
 }

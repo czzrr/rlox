@@ -1,12 +1,12 @@
 use crate::token_type::TokenType;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    ty: TokenType,
+    pub ty: TokenType,
     pub lexeme: String,
-    literal: Option<Literal>,
-    line: usize,
+    pub literal: Option<Literal>,
+    pub line: usize,
 }
 
 impl Token {
@@ -26,7 +26,7 @@ impl fmt::Display for Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Id(String),
     Str(String),
@@ -42,7 +42,7 @@ impl ToString for Literal {
             Id(s) | Str(s) => s.to_owned(),
             Bool(b) => b.to_string(),
             Double(n) => n.to_string(),
-            Nil => "nil".to_owned()
+            Nil => "nil".to_owned(),
         }
     }
 }
