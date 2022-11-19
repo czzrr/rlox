@@ -1,6 +1,10 @@
-use std::{collections::HashMap, borrow::Borrow};
+use std::collections::HashMap;
 
-use crate::{token::{Token, Literal}, token_type::TokenType, error_handler::ErrorHandler};
+use crate::{
+    error_handler::ErrorHandler,
+    token::{Literal, Token},
+    token_type::TokenType,
+};
 
 pub struct Scanner<'a> {
     source: String,
@@ -9,7 +13,7 @@ pub struct Scanner<'a> {
     current: usize,
     line: usize,
     keywords: HashMap<&'static str, TokenType>,
-    error_handler: &'a mut ErrorHandler
+    error_handler: &'a mut ErrorHandler,
 }
 
 impl<'a> Scanner<'a> {
@@ -31,7 +35,7 @@ impl<'a> Scanner<'a> {
         keywords.insert("true", TokenType::True);
         keywords.insert("var", TokenType::Var);
         keywords.insert("while", TokenType::While);
-        
+
         Scanner {
             source,
             tokens: Vec::new(),
@@ -39,7 +43,7 @@ impl<'a> Scanner<'a> {
             current: 0,
             line: 1,
             keywords,
-            error_handler
+            error_handler,
         }
     }
 
@@ -49,7 +53,8 @@ impl<'a> Scanner<'a> {
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(TokenType::Eof, "".to_owned(), None, self.line));
+        self.tokens
+            .push(Token::new(TokenType::Eof, "".to_owned(), None, self.line));
 
         &self.tokens
     }
@@ -94,7 +99,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     self.add_token(TokenType::Greater);
                 }
-            },
+            }
             '/' => {
                 if self.matches('/') {
                     while self.peek() == '\n' || self.is_at_end() {
@@ -103,13 +108,15 @@ impl<'a> Scanner<'a> {
                 } else {
                     self.add_token(TokenType::Slash);
                 }
-            },
+            }
             ' ' | '\r' | '\t' => (),
             '\n' => self.line += 1,
             '"' => self.string(),
             c if self.is_digit(c) => self.number(),
             c if self.is_alpha(c) => self.identifier(),
-            _ => self.error_handler.line_error(self.line, "Unexpected character.")
+            _ => self
+                .error_handler
+                .line_error(self.line, "Unexpected character."),
         }
     }
 
@@ -141,7 +148,7 @@ impl<'a> Scanner<'a> {
 
         self.add_token_lit(
             TokenType::Number,
-            Some(Literal::Double(self.source[self.start..self.current].parse().unwrap())),
+            Literal::Double(self.source[self.start..self.current].parse().unwrap()),
         );
     }
 
@@ -152,14 +159,14 @@ impl<'a> Scanner<'a> {
             }
             self.advance();
         }
-        
+
         if self.is_at_end() {
             self.error_handler
                 .line_error(self.line, "Unterminated string.");
         } else {
             self.advance();
             let value = self.source[self.start + 1..self.current - 1].to_owned();
-            self.add_token_lit(TokenType::String, Some(Literal::Str(value)));
+            self.add_token_lit(TokenType::String, Literal::Str(value));
         }
     }
 
@@ -211,12 +218,13 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, ty: TokenType) {
-        self.add_token_lit(ty, None);
+        let text = self.source[self.start..self.current].to_owned();
+        self.tokens.push(Token::new(ty, text, None, self.line))
     }
 
-    fn add_token_lit(&mut self, ty: TokenType, literal: Option<Literal>) {
+    fn add_token_lit(&mut self, ty: TokenType, literal: Literal) {
         let text = self.source[self.start..self.current].to_owned();
-        self.tokens.push(Token::new(ty, text, literal, self.line))
-
+        self.tokens
+            .push(Token::new(ty, text, Some(literal), self.line))
     }
 }

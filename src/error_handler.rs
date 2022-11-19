@@ -4,9 +4,7 @@ pub struct ErrorHandler {
 
 impl ErrorHandler {
     pub fn new() -> ErrorHandler {
-        ErrorHandler {
-            had_error: false,
-        }
+        ErrorHandler { had_error: false }
     }
 
     pub fn line_error(&mut self, line: usize, message: &str) {

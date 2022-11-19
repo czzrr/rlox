@@ -9,7 +9,7 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(ty: TokenType, lexeme: String, literal: Option<Literal>, line: usize,) -> Token {
+    pub fn new(ty: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Token {
         Token {
             ty,
             lexeme,

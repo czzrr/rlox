@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use rlox::{scanner::Scanner, error_handler::ErrorHandler};
+use rlox::{error_handler::ErrorHandler, scanner::Scanner};
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     match args.len() {
-        1 => run_prompt(),
+        1 => run_prompt().unwrap(),
         2 => run_file(&args[1]).unwrap(),
         _ => {
             println!("Usage: rlox [script]");
@@ -19,19 +19,22 @@ fn run_file(path: impl AsRef<Path>) -> std::io::Result<()> {
     if run(script).is_err() {
         std::process::exit(65)
     }
+
     Ok(())
 }
 
-fn run_prompt() {
+fn run_prompt() -> std::io::Result<()> {
     loop {
         print!("> ");
         let mut line = String::new();
-        std::io::stdin().read_line(&mut line);
+        std::io::stdin().read_line(&mut line)?;
         if line.is_empty() {
             break;
         }
-        run(line);
+        run(line).unwrap();
     }
+
+    Ok(())
 }
 
 fn run(source: String) -> Result<(), ()> {
@@ -42,15 +45,6 @@ fn run(source: String) -> Result<(), ()> {
     for token in tokens {
         println!("{}", token);
     }
-    
+
     Ok(())
-}
-
-fn error(line: usize, message: &str) {
-    report(line, "", message);
-}
-
-fn report(line: usize, location: &str, message: &str) {
-    println!("[line {line}] Error {location}: {message}");
-    // hadError = true; ?
 }
