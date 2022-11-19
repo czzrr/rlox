@@ -1,9 +1,10 @@
 use crate::token_type::TokenType;
 use std::fmt;
 
+#[derive(Debug)]
 pub struct Token {
     ty: TokenType,
-    lexeme: String,
+    pub lexeme: String,
     literal: Option<Literal>,
     line: usize,
 }
@@ -32,4 +33,16 @@ pub enum Literal {
     Bool(bool),
     Double(f64),
     Nil,
+}
+
+impl ToString for Literal {
+    fn to_string(&self) -> String {
+        use Literal::*;
+        match self {
+            Id(s) | Str(s) => s.to_owned(),
+            Bool(b) => b.to_string(),
+            Double(n) => n.to_string(),
+            Nil => "nil".to_owned()
+        }
+    }
 }
