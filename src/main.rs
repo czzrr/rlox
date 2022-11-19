@@ -45,9 +45,9 @@ fn run(source: String) -> Result<(), ()> {
     let mut parser = Parser::new(tokens.to_owned());
     let expr = parser.parse(&mut error_handler);
 
-    // for token in tokens {
-    //     println!("{}", token);
-    // }
+    for token in tokens {
+        println!("{}", token);
+    }
     
     if let Some(expr) = expr {
         println!("{}", ast_printer::print(expr.as_ref()));

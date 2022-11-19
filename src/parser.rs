@@ -1,19 +1,27 @@
 use crate::{expr::Expr, token::{Token, Literal}, token_type::TokenType, error_handler::ErrorHandler};
+use thiserror::Error;
 
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Error)]
 pub enum ParseErr {
+    #[error("Expect ')' after expression.")]
     ExpectMissingRightParen,
+    #[error("Expect expression.")]
     ExpectExpr,
+    #[error("Expect ';' after value.")]
     MissingSemicolonAfterExprStmt,
+    #[error("Sync error.")]
     Sync,
-    ExpectVarName,
-    InvalidAssignmentTarget,
-    ExpectRightBraceAfterBlock,
+    //#[error("Expect variable name.")]
+    //ExpectVarName,
+    //#[error("Invalid assignment target.")]
+    //InvalidAssignmentTarget,
+    //#[error("Expect '}' after block.")]
+    //ExpectRightBraceAfterBlock,
 }
 
 type ParseResult<T> = Result<T, (Token, ParseErr)>;

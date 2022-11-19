@@ -27,21 +27,10 @@ impl ErrorHandler {
     }
 
     pub fn parse_error(&mut self, token: &Token, parse_err: ParseErr) {
-        let message = match parse_err {
-            ParseErr::ExpectMissingRightParen => "Expect ')' after expression.",
-            ParseErr::ExpectExpr => "Expect expression.",
-            ParseErr::MissingSemicolonAfterExprStmt => "Expect ';' after value.",
-            ParseErr::Sync => "Sync error.",
-            ParseErr::ExpectVarName => "Expect variable name.",
-            ParseErr::InvalidAssignmentTarget => "Invalid assignment target.",
-            ParseErr::ExpectRightBraceAfterBlock => "Expect '}' after block.",
-            //_ => todo!()
-        };
-
         if token.ty == TokenType::Eof {
-            self.report(token.line, " at end", message);
+            self.report(token.line, " at end", &parse_err.to_string());
         } else {
-            self.report(token.line, &format!(" at '{}'", token.lexeme), message);
+            self.report(token.line, &format!(" at '{}'", token.lexeme), &parse_err.to_string());
         }
     }
 }
