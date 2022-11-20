@@ -1,6 +1,6 @@
-use std::{path::Path, io::Write};
+use std::{io::Write, path::Path};
 
-use rlox::{error_handler::ErrorHandler, scanner::Scanner, parser::Parser, ast_printer, interpreter::interpret};
+use rlox::{error_handler::ErrorHandler, interpreter:: Interpreter, parser::Parser, scanner::Scanner};
 
 const USAGE_ERROR: i32 = 64;
 const DATA_ERROR: i32 = 65;
@@ -20,9 +20,11 @@ fn main() {
 
 fn run_file(path: impl AsRef<Path>) -> std::io::Result<()> {
     let script = std::fs::read_to_string(path)?;
+
+    let mut interpreter = Interpreter::new();
     let mut error_handler = ErrorHandler::new();
 
-    run(script, &mut error_handler);
+    run(script, &mut interpreter, &mut error_handler);
 
     if error_handler.had_error() {
         std::process::exit(DATA_ERROR);
@@ -35,8 +37,9 @@ fn run_file(path: impl AsRef<Path>) -> std::io::Result<()> {
 }
 
 fn run_prompt() -> std::io::Result<()> {
+    let mut interpreter = Interpreter::new();
     let mut error_handler = ErrorHandler::new();
-
+    
     loop {
         print!("> ");
         std::io::stdout().flush()?;
@@ -45,29 +48,19 @@ fn run_prompt() -> std::io::Result<()> {
         if line.is_empty() {
             break;
         }
-        run(line, &mut error_handler).unwrap();
+        run(line, &mut interpreter, &mut error_handler);
     }
 
     Ok(())
 }
 
-fn run(source: String, error_handler: &mut ErrorHandler) -> Result<(), ()> {
+fn run(source: String, interpreter: &mut Interpreter, error_handler: &mut ErrorHandler) {
     let mut scanner = Scanner::new(source, error_handler);
     let tokens = scanner.scan_tokens().to_owned();
     let mut parser = Parser::new(tokens.to_owned());
-    let expr = parser.parse(error_handler);
-    
-    // for token in tokens {
-    //     println!("{}", token);
-    // }
-    
-    if let Some(expr) = expr {
-        //println!("{}", ast_printer::print(expr.as_ref()));
-        interpret(*expr, error_handler);
-    } else {
-        println!("{:?}", expr);
-    }
-    
+    let statements = parser.parse(error_handler);
 
-    Ok(())
+    if let Some(statements) = statements {
+        interpreter.interpret(statements, error_handler);
+    }
 }

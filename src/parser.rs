@@ -1,4 +1,10 @@
-use crate::{expr::Expr, token::{Token, Literal}, token_type::TokenType, error_handler::ErrorHandler};
+use crate::{
+    error_handler::ErrorHandler,
+    expr::Expr,
+    stmt::Stmt,
+    token::{Literal, Token},
+    token_type::TokenType,
+};
 use thiserror::Error;
 
 pub struct Parser {
@@ -16,12 +22,12 @@ pub enum ParseErr {
     MissingSemicolonAfterExprStmt,
     #[error("Sync error.")]
     Sync,
-    //#[error("Expect variable name.")]
-    //ExpectVarName,
-    //#[error("Invalid assignment target.")]
-    //InvalidAssignmentTarget,
-    //#[error("Expect '}' after block.")]
-    //ExpectRightBraceAfterBlock,
+    #[error("Expect variable name.")]
+    ExpectVarName,
+    #[error("Invalid assignment target.")]
+    InvalidAssignmentTarget,
+    #[error("Expect '}}' after block.")]
+    ExpectRightBraceAfterBlock,
 }
 
 type ParseResult<T> = Result<T, (Token, ParseErr)>;
@@ -31,19 +37,115 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self, error_handler: &mut ErrorHandler) -> Option<Box<Expr>> {
-        let expr = self.expression();
-        match expr {
-            Ok(expr) => Some(expr),
-            Err((token, parse_err)) => {
-                error_handler.parse_error(&token, parse_err);
-                None
+    pub fn parse(&mut self, error_handler: &mut ErrorHandler) -> Option<Vec<Stmt>> {
+        let mut statements = Vec::new();
+        while !self.is_at_end() {
+            let stmt = self.declaration();
+            match stmt {
+                Ok(stmt) => statements.push(stmt),
+                Err((token, parse_err)) => {
+                    error_handler.parse_error(&token, parse_err);
+                    return None;
+                }
             }
         }
+        Some(statements)
     }
 
     fn expression(&mut self) -> ParseResult<Box<Expr>> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn declaration(&mut self) -> ParseResult<Stmt> {
+        let res = {
+            if self.matches(vec![TokenType::Var]) {
+                self.var_declaration()
+            } else {
+                self.statement()
+            }
+        };
+
+        if res.is_err() {
+            self.synchronize();
+            self.error(ParseErr::Sync)
+        } else {
+            res
+        }
+    }
+
+    fn statement(&mut self) -> ParseResult<Stmt> {
+        if self.matches(vec![TokenType::Print]) {
+            self.print_statement()
+        } else if self.matches(vec![TokenType::LeftBrace]) {
+            self.block().map(|stmts| Stmt::Block(stmts))
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> ParseResult<Stmt> {
+        let value = self.expression().map_err(|e| e)?;
+        if self.consume(TokenType::Semicolon).is_some() {
+            Ok(Stmt::PrintStmt(*value))
+        } else {
+            self.error(ParseErr::MissingSemicolonAfterExprStmt)
+        }
+    }
+
+    fn var_declaration(&mut self) -> ParseResult<Stmt> {
+        let name = self.consume(TokenType::Identifier);
+        match name {
+            Some(name) => {
+                let name = name.clone();
+                let mut initializer = Box::new(Expr::Literal(Literal::Nil));
+                if self.matches(vec![TokenType::Equal]) {
+                    initializer = self.expression()?;
+                }
+                if self.consume(TokenType::Semicolon).is_some() {
+                    Ok(Stmt::Var(name, Some(*initializer)))
+                } else {
+                    self.error(ParseErr::MissingSemicolonAfterExprStmt)
+                }
+            }
+            _ => self.error(ParseErr::ExpectVarName),
+        }
+    }
+
+    fn expression_statement(&mut self) -> ParseResult<Stmt> {
+        let value = self.expression().map_err(|e| e)?;
+        if self.consume(TokenType::Semicolon).is_some() {
+            Ok(Stmt::ExprStmt(*value))
+        } else {
+            self.error(ParseErr::MissingSemicolonAfterExprStmt)
+        }
+    }
+
+    fn block(&mut self) -> ParseResult<Vec<Stmt>> {
+        let mut statements = Vec::new();
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+        if self.consume(TokenType::RightBrace).is_none() {
+            self.error(ParseErr::ExpectRightBraceAfterBlock)
+        } else {
+            Ok(statements)
+        }
+    }
+
+    fn assignment(&mut self) -> ParseResult<Box<Expr>> {
+        let expr = self.equality()?;
+
+        if self.matches(vec![TokenType::Equal]) {
+            let equals = self.previous().to_owned();
+            if let Expr::Variable(name) = *expr {
+                let value = self.assignment()?;
+                Ok(Box::new(Expr::Assign(name, value)))
+            } else {
+                Err((equals, ParseErr::InvalidAssignmentTarget))
+            }
+        } else {
+            Ok(expr)
+        }
     }
 
     fn equality(&mut self) -> ParseResult<Box<Expr>> {
@@ -123,9 +225,9 @@ impl Parser {
                 self.previous().literal.as_ref().unwrap().clone(),
             )));
         }
-        // if self.matches(vec![TokenType::Identifier]) {
-        //     return Ok(Box::new(Expr::Variable(self.previous().clone())));
-        // }
+        if self.matches(vec![TokenType::Identifier]) {
+            return Ok(Box::new(Expr::Variable(self.previous().clone())));
+        }
         if self.matches(vec![TokenType::LeftParen]) {
             let expr = self.expression()?;
             if self.consume(TokenType::RightParen).is_some() {
@@ -187,4 +289,21 @@ impl Parser {
         Err((self.peek().clone(), err))
     }
 
+    fn synchronize(&mut self) {
+        while !self.is_at_end() {
+            match self.peek().ty {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => break,
+                _ => {
+                    self.advance();
+                }
+            }
+        }
+    }
 }

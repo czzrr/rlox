@@ -1,7 +1,14 @@
-use crate::{expr::Expr, token::{Token, Literal}, token_type::TokenType};
+use crate::{
+    expr::Expr,
+    token::{Literal, Token},
+    token_type::TokenType,
+};
 
 pub fn example() {
-    let u = Expr::Unary(Token::new(TokenType::Minus, "-".to_owned(), None, 1), Box::new(Expr::Literal(Literal::Double(123.0))));
+    let u = Expr::Unary(
+        Token::new(TokenType::Minus, "-".to_owned(), None, 1),
+        Box::new(Expr::Literal(Literal::Double(123.0))),
+    );
     let s = Token::new(TokenType::Star, "*".to_owned(), None, 1);
     let g = Expr::Grouping(Box::new(Expr::Literal(Literal::Double(45.67))));
     let e = Expr::Binary(Box::new(u), s, Box::new(g));
@@ -17,8 +24,7 @@ pub fn print(expr: &Expr) -> String {
     }
 }
 
-fn parenthesize<T: AsRef<Expr>>(name: & str, exprs: impl IntoIterator<Item = T>) -> String
-{
+fn parenthesize<T: AsRef<Expr>>(name: &str, exprs: impl IntoIterator<Item = T>) -> String {
     let mut builder = String::new();
 
     builder.push('(');
