@@ -28,14 +28,20 @@ pub enum ParseErr {
     InvalidAssignmentTarget,
     #[error("Expect '}}' after block.")]
     ExpectRightBraceAfterBlock,
-    #[error("Expect '(' after if.")]
+    #[error("Expect '(' after 'if'.")]
     ExpectLeftParenAfterIf,
     #[error("Expect ')' after if condition.")]
     ExpectRightParenAfterIfCond,
-    #[error("Expect '(' after while.")]
+    #[error("Expect '(' after 'while'.")]
     ExpectLeftParenAfterWhile,
     #[error("Expect ')' after while condition.")]
     ExpectRightParenAfterWhileCond,
+    #[error("Expect '(' after 'for'.")]
+    ExpectLeftParenAfterFor,
+    #[error("Expect ';' after for condition.")]
+    ExpectSemicolonAfterForCond,
+    #[error("Expect ')' after for clauses.")]
+    ExpectRightParenAfterForClause
 }
 
 type ParseResult<T> = Result<T, (Token, ParseErr)>;
@@ -82,6 +88,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
+        if self.matches(vec![TokenType::For]) {
+            return self.for_statement();
+        }
+
         if self.matches(vec![TokenType::If]) {
             return self.if_statement();
         }
@@ -99,6 +109,48 @@ impl Parser {
         }
 
         self.expression_statement()
+    }
+
+    fn for_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume_or_err(TokenType::LeftParen, ParseErr::ExpectLeftParenAfterFor)?;
+
+        let mut initializer = None;
+        if self.matches1(TokenType::Semicolon) {
+            ()
+        } else if self.matches1(TokenType::Var) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            initializer = Some(self.expression_statement()?);
+        }
+
+        let mut condition = None;
+        if !self.check(TokenType::Semicolon) {
+            condition = Some(*self.expression()?);
+        }
+        self.consume_or_err(TokenType::Semicolon, ParseErr::ExpectSemicolonAfterForCond)?;
+
+        let mut increment = None;
+        if !self.check(TokenType::RightParen) {
+            increment = Some(self.expression()?);
+        }
+        self.consume_or_err(TokenType::RightParen, ParseErr::ExpectRightParenAfterForClause)?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Stmt::Block(vec![body, Stmt::ExprStmt(*increment)]);
+        }
+
+        if condition.is_none() {
+            condition = Some(Expr::Literal(Literal::Bool(true)));
+        }
+        body = Stmt::While(condition.unwrap(), Box::new(body));
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(vec![initializer, body]);
+        }
+
+        Ok(body)
     }
 
     fn if_statement(&mut self) -> ParseResult<Stmt> {
@@ -314,6 +366,10 @@ impl Parser {
             }
         }
         false
+    }
+
+    fn matches1(&mut self, token_type: TokenType) -> bool {
+        self.matches(vec![token_type])
     }
 
     fn consume(&mut self, token_type: TokenType) -> Option<&Token> {
