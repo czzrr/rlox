@@ -137,6 +137,14 @@ impl Interpreter {
                     let s = name.lexeme.clone();
                     Err((name, InterpErr::UndefVar(s)))
                 }
+            },
+            Expr::Logical(left, op, right) => {
+                let left = self.evaluate_expr(*left)?;
+                match op.ty {
+                    TokenType::Or if Self::is_truthy(&left) => Ok(left),
+                    TokenType::And if !Self::is_truthy(&left) => Ok(left),
+                    _ => self.evaluate_expr(*right)
+                }
             }
         }
     }
