@@ -28,6 +28,10 @@ pub enum ParseErr {
     InvalidAssignmentTarget,
     #[error("Expect '}}' after block.")]
     ExpectRightBraceAfterBlock,
+    #[error("Expect '(' after if.")]
+    ExpectLeftParenAfterIf,
+    #[error("Expect ')' after if condition.")]
+    ExpectRightParenAfterIfCond,
 }
 
 type ParseResult<T> = Result<T, (Token, ParseErr)>;
@@ -74,13 +78,33 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
-        if self.matches(vec![TokenType::Print]) {
+        if self.matches(vec![TokenType::If]) {
+            self.if_statement()
+        } else if self.matches(vec![TokenType::Print]) {
             self.print_statement()
         } else if self.matches(vec![TokenType::LeftBrace]) {
             self.block().map(|stmts| Stmt::Block(stmts))
         } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume_or_err(TokenType::LeftParen, ParseErr::ExpectLeftParenAfterIf)?;
+
+        let cond = self.expression()?;
+
+        self.consume_or_err(TokenType::RightParen, ParseErr::ExpectRightParenAfterIfCond)?;
+
+        let if_branch = Box::new(self.statement()?);
+
+        let else_branch = if self.matches(vec![TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+        
+        Ok(Stmt::If(*cond, if_branch, else_branch))
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
@@ -256,6 +280,14 @@ impl Parser {
         }
     }
 
+    fn consume_or_err(&mut self, token_type: TokenType, parse_err: ParseErr) -> ParseResult<()> {
+        if self.consume(token_type).is_none() {
+            self.error(parse_err)
+        } else {
+            Ok(())
+        }
+    }
+
     fn check(&self, token_type: TokenType) -> bool {
         if self.is_at_end() {
             false
@@ -290,7 +322,13 @@ impl Parser {
     }
 
     fn synchronize(&mut self) {
+        self.advance();
+
         while !self.is_at_end() {
+            if self.previous().ty == TokenType::Semicolon {
+                return;
+            }
+
             match self.peek().ty {
                 TokenType::Class
                 | TokenType::Fun
@@ -299,11 +337,11 @@ impl Parser {
                 | TokenType::If
                 | TokenType::While
                 | TokenType::Print
-                | TokenType::Return => break,
-                _ => {
-                    self.advance();
-                }
+                | TokenType::Return => return,
+                _ => (),
             }
+
+            self.advance();
         }
     }
 }

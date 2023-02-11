@@ -67,6 +67,15 @@ impl Interpreter {
             Stmt::Block(statements) => {
                 self.execute_block(statements, Environment::new_enclosing(Box::new(self.environment.clone())))
             }
+            Stmt::If(cond, if_branch, else_branch) => {
+                if Self::is_truthy(&self.evaluate_expr(cond)?) {
+                    self.execute_stmt(*if_branch)
+                } else if let Some(eb) = else_branch {
+                    self.execute_stmt(*eb)
+                } else {
+                    Ok(Literal::Nil)
+                }
+            }
         }
     }
 
