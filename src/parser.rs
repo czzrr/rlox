@@ -32,6 +32,10 @@ pub enum ParseErr {
     ExpectLeftParenAfterIf,
     #[error("Expect ')' after if condition.")]
     ExpectRightParenAfterIfCond,
+    #[error("Expect '(' after while.")]
+    ExpectLeftParenAfterWhile,
+    #[error("Expect ')' after while condition.")]
+    ExpectRightParenAfterWhileCond,
 }
 
 type ParseResult<T> = Result<T, (Token, ParseErr)>;
@@ -79,14 +83,22 @@ impl Parser {
 
     fn statement(&mut self) -> ParseResult<Stmt> {
         if self.matches(vec![TokenType::If]) {
-            self.if_statement()
-        } else if self.matches(vec![TokenType::Print]) {
-            self.print_statement()
-        } else if self.matches(vec![TokenType::LeftBrace]) {
-            self.block().map(|stmts| Stmt::Block(stmts))
-        } else {
-            self.expression_statement()
+            return self.if_statement();
         }
+
+        if self.matches(vec![TokenType::Print]) {
+            return self.print_statement();
+        }
+
+        if self.matches(vec![TokenType::While]) {
+            return self.while_statement();
+        }
+
+        if self.matches(vec![TokenType::LeftBrace]) {
+            return self.block().map(|stmts| Stmt::Block(stmts));
+        }
+
+        self.expression_statement()
     }
 
     fn if_statement(&mut self) -> ParseResult<Stmt> {
@@ -103,7 +115,7 @@ impl Parser {
         } else {
             None
         };
-        
+
         Ok(Stmt::If(*cond, if_branch, else_branch))
     }
 
@@ -133,6 +145,18 @@ impl Parser {
             }
             _ => self.error(ParseErr::ExpectVarName),
         }
+    }
+
+    fn while_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume_or_err(TokenType::LeftParen, ParseErr::ExpectLeftParenAfterWhile)?;
+
+        let cond = self.expression()?;
+
+        self.consume_or_err(TokenType::RightParen, ParseErr::ExpectRightParenAfterWhileCond)?;
+
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While(*cond, body))
     }
 
     fn expression_statement(&mut self) -> ParseResult<Stmt> {

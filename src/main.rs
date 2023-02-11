@@ -1,6 +1,8 @@
 use std::{io::Write, path::Path};
 
-use rlox::{error_handler::ErrorHandler, interpreter:: Interpreter, parser::Parser, scanner::Scanner};
+use rlox::{
+    error_handler::ErrorHandler, interpreter::Interpreter, parser::Parser, scanner::Scanner,
+};
 
 const USAGE_ERROR: i32 = 64;
 const DATA_ERROR: i32 = 65;
@@ -39,7 +41,7 @@ fn run_file(path: impl AsRef<Path>) -> std::io::Result<()> {
 fn run_prompt() -> std::io::Result<()> {
     let mut interpreter = Interpreter::new();
     let mut error_handler = ErrorHandler::new();
-    
+
     loop {
         print!("> ");
         std::io::stdout().flush()?;

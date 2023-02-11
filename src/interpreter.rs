@@ -17,7 +17,7 @@ pub enum InterpErr {
     #[error("Operands must be two numbers or two strings.")]
     OpsMustBeNumsOrStrs,
     #[error("Undefined variable '{0}'.")]
-    UndefVar(String)
+    UndefVar(String),
 }
 
 type InterpResult = Result<Literal, (Token, InterpErr)>;
@@ -54,7 +54,7 @@ impl Interpreter {
                     }
                     _ => val,
                 }
-            },
+            }
             Stmt::Var(token, initializer) => {
                 if let Some(initializer) = initializer {
                     let value = self.evaluate_expr(initializer)?;
@@ -64,9 +64,10 @@ impl Interpreter {
                 }
                 Ok(Literal::Nil)
             },
-            Stmt::Block(statements) => {
-                self.execute_block(statements, Environment::new_enclosing(Box::new(self.environment.clone())))
-            }
+            Stmt::Block(statements) => self.execute_block(
+                statements,
+                Environment::new_enclosing(Box::new(self.environment.clone())),
+            ),
             Stmt::If(cond, if_branch, else_branch) => {
                 if Self::is_truthy(&self.evaluate_expr(cond)?) {
                     self.execute_stmt(*if_branch)
@@ -75,6 +76,12 @@ impl Interpreter {
                 } else {
                     Ok(Literal::Nil)
                 }
+            },
+            Stmt::While(cond, body) => {
+                while Self::is_truthy(&self.evaluate_expr(cond.clone())?) {
+                    self.execute_stmt(*body.clone())?;
+                }
+                Ok(Literal::Nil)
             }
         }
     }
@@ -120,7 +127,7 @@ impl Interpreter {
                     TokenType::EqualEqual => Ok(Literal::Bool(left == right)),
                     _ => Ok(Literal::Nil),
                 }
-            },
+            }
             Expr::Variable(token) => {
                 if let Some(value) = self.environment.get(&token) {
                     Ok(value.clone())
@@ -128,37 +135,36 @@ impl Interpreter {
                     let s = token.lexeme.to_owned();
                     Err((token, InterpErr::UndefVar(s)))
                 }
-            },
+            }
             Expr::Assign(name, value) => {
                 let value = self.evaluate_expr(*value)?;
                 if self.environment.assign(&name, &value) {
-                    Ok(value)
+                    Ok(self.environment.get(&name).unwrap().clone())
                 } else {
                     let s = name.lexeme.clone();
                     Err((name, InterpErr::UndefVar(s)))
                 }
-            },
+            }
             Expr::Logical(left, op, right) => {
                 let left = self.evaluate_expr(*left)?;
                 match op.ty {
                     TokenType::Or if Self::is_truthy(&left) => Ok(left),
                     TokenType::And if !Self::is_truthy(&left) => Ok(left),
-                    _ => self.evaluate_expr(*right)
+                    _ => self.evaluate_expr(*right),
                 }
             }
         }
     }
 
     fn execute_block(&mut self, statements: Vec<Stmt>, environment: Environment) -> InterpResult {
-        let previous = self.environment.clone();
         self.environment = environment;
         for statement in statements {
             self.execute_stmt(statement)?;
         }
-        self.environment = previous;
+        // The previous environment is always saved as the enclosing.
+        self.environment = *self.environment.enclosing().unwrap();
         Ok(Literal::Nil)
     }
-
 
     fn is_truthy(lit: &Literal) -> bool {
         match lit {

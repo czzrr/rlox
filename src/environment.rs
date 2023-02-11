@@ -4,16 +4,22 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct Environment {
     values: HashMap<String, Literal>,
-    enclosing: Option<Box<Environment>>
+    enclosing: Option<Box<Environment>>,
 }
 
 impl Environment {
     pub fn new() -> Environment {
-        Environment { values: HashMap::new(), enclosing: None }
+        Environment {
+            values: HashMap::new(),
+            enclosing: None,
+        }
     }
 
     pub fn new_enclosing(enclosing: Box<Environment>) -> Environment {
-        Environment { values: HashMap::new(), enclosing: Some(enclosing) }
+        Environment {
+            values: HashMap::new(),
+            enclosing: Some(enclosing),
+        }
     }
 
     pub fn define(&mut self, name: String, value: Literal) {
@@ -32,13 +38,17 @@ impl Environment {
     }
 
     pub fn assign(&mut self, name: &Token, value: &Literal) -> bool {
-        let r1 = self.values.insert(name.lexeme.clone(), value.clone());
-        if r1.is_some() {
+        if self.values.contains_key(&name.lexeme) {
+            self.values.insert(name.lexeme.clone(), value.clone());
             true
         } else if let Some(ref mut enclosing) = self.enclosing {
             enclosing.assign(&name, value)
         } else {
             false
         }
+    }
+
+    pub fn enclosing(&self) -> Option<Box<Environment>> {
+        self.enclosing.clone()
     }
 }
