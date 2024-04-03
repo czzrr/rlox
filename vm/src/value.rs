@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[derive(Clone, Copy)]
 pub enum Value {
     Double(f64),
 }

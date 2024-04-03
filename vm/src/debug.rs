@@ -20,10 +20,15 @@ impl Disassembler {
             print!("{:4} ", chunk.lines[offset]);
         }
         let instruction = chunk.code[offset];
-        if let Ok(opcode) = OpCode::try_from(instruction) {
+        if let Ok(opcode) = instruction.try_into() {
             match opcode {
-                OpCode::Return => Self::simple_instruction("RETURN", offset),
                 OpCode::Constant => Self::constant_instruction("CONSTANT", chunk, offset),
+                OpCode::Add => Self::simple_instruction("ADD", offset),
+                OpCode::Subtract => Self::simple_instruction("SUBTRACT", offset),
+                OpCode::Multiply => Self::simple_instruction("MULTIPLY", offset),
+                OpCode::Divide => Self::simple_instruction("DIVIDE", offset),
+                OpCode::Negate => Self::simple_instruction("NEGATE", offset),
+                OpCode::Return => Self::simple_instruction("RETURN", offset),
             }
         } else {
             println!("Unknown opcode {}", instruction);
