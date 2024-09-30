@@ -3,7 +3,12 @@ name = "vm"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+src = "src/lib.rs"
+
+[[bin]]
+name = "vm"
+src = "src/main.rs"
 
 [dependencies]
 derive-try-from-primitive = "1.0.0"

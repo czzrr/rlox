@@ -1,9 +1,7 @@
 use std::{env::args, io::stdin, path::Path};
 
 use vm::{
-    chunk::{Chunk, OpCode},
-    value::Value,
-    vm::Vm,
+    chunk::{Chunk, OpCode}, compiler::compile, value::Value, vm::Vm
 };
 
 fn main() {
