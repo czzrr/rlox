@@ -141,7 +141,47 @@ impl Scanner<'_> {
             self.advance();
         }
 
-        todo!()
+        let ty = self.identifier_type();
+
+        self.make_token(ty)
+    }
+
+    fn identifier_type(&self) -> TokenType {
+        match self.start.get_ref()[self.start.position() as usize] as char {
+            'a' => self.check_keyword(1, "nd", TokenType::And),
+            'c' => self.check_keyword(1, "lass", TokenType::Class),
+            'e' => self.check_keyword(1, "lse", TokenType::Else),
+            'i' => self.check_keyword(1, "f", TokenType::If),
+            'n' => self.check_keyword(1, "il", TokenType::Nil),
+            'o' => self.check_keyword(1, "r", TokenType::Or),
+            'p' => self.check_keyword(1, "print", TokenType::Print),
+            'r' => self.check_keyword(1, "eturn", TokenType::Return),
+            's' => self.check_keyword(1, "uper", TokenType::Super),
+            'v' => self.check_keyword(1, "ar", TokenType::Var),
+            'w' => self.check_keyword(1, "hile", TokenType::While),
+            'f' if self.current.position() - self.start.position() > 1 =>
+                match self.start.get_ref()[self.start.position() as usize] as char {
+                     'a' => self.check_keyword(2, "lse", TokenType::False),
+                     'o' => self.check_keyword(2, "r", TokenType::For),
+                     'u' => self.check_keyword(2, "n", TokenType::Fun),
+                     _ => TokenType::Identifier
+                }
+            't' if self.current.position() - self.start.position() > 1 =>
+                match self.start.get_ref()[self.start.position() as usize] as char {
+                     'h' => self.check_keyword(2, "is", TokenType::False),
+                     'r' => self.check_keyword(2, "ue", TokenType::For),
+                     _ => TokenType::Identifier
+                }
+            _ => TokenType::Identifier
+        }
+    }
+
+    fn check_keyword(&self, start: usize, rest: &str, ty: TokenType) -> TokenType {
+        if self.current.position() - self.start.position() == rest.len() as u64 && &self.start.get_ref()[start..start + rest.len()] == rest.as_bytes() {
+            ty
+        } else {
+            TokenType::Identifier
+        }
     }
 
     fn number(&mut self) -> Token {
