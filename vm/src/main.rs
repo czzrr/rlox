@@ -1,19 +1,20 @@
 use std::{env::args, io::stdin, path::Path};
 
-use vm::{
-    chunk::{Chunk, OpCode}, compiler::compile, value::Value, vm::Vm
-};
+use vm::{compiler::Compiler, vm::Vm};
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let args: Vec<_> = args().collect();
     match args.len() {
-        1 => repl(),
-        2 => run_file(Path::new(&args[1])),
+        1 => repl()?,
+        2 => run_file(Path::new(&args[1])).map(|_| ())?,
         _ => {
             eprintln!("Usage: clox [path]");
             std::process::exit(64);
         }
     }
+
+    Ok(())
+
     // let mut chunk = Chunk::new();
 
     // let constant = chunk.add_constant(Value::Double(1.2));
@@ -39,21 +40,28 @@ fn main() {
     // vm.interpret(&chunk).unwrap();
 }
 
-fn repl() {
+fn repl() -> anyhow::Result<()> {
     loop {
         let mut line = String::new();
         if stdin().read_line(&mut line).unwrap() == 0 {
-            break;
+            break Ok(());
         }
-        interpret(line.as_bytes()); 
+        interpret(line.as_bytes())?;
     }
 }
 
-fn interpret(source: &[u8]) {
-    compile(source);
+struct InterpretResult;
+
+fn interpret(source: &[u8]) -> anyhow::Result<InterpretResult> {
+    let mut compiler = Compiler::new(source);
+    let chunk = compiler.compile()?;
+    let mut vm = Vm::new();
+    vm.interpret(&chunk)?;
+
+    Ok(InterpretResult)
 }
 
-fn run_file(path: impl AsRef<Path>) {
+fn run_file(path: impl AsRef<Path>) -> anyhow::Result<InterpretResult> {
     let source = std::fs::read_to_string(path).unwrap();
-    interpret(source.as_bytes()); 
+    interpret(source.as_bytes())
 }

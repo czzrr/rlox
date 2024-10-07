@@ -26,13 +26,13 @@ impl<'a> Vm<'a> {
             stack: VecDeque::new(),
         }
     }
-    pub fn interpret(&'a mut self, chunk: &'a Chunk) -> Result<(), InterpretError> {
+    pub fn interpret(&'a mut self, chunk: &'a Chunk) -> anyhow::Result<()> {
         self.chunk = Some(chunk);
         self.index = 0;
         self.run()
     }
 
-    pub fn run(&mut self) -> Result<(), InterpretError> {
+    pub fn run(&mut self) -> anyhow::Result<()> {
         loop {
             for value in &self.stack {
                 print!("[ {} ]", value);

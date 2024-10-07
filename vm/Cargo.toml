@@ -11,4 +11,5 @@ name = "vm"
 src = "src/main.rs"
 
 [dependencies]
+anyhow = "1.0.89"
 derive-try-from-primitive = "1.0.0"
