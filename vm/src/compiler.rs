@@ -1,8 +1,11 @@
+use core::str;
+
 use anyhow::bail;
 
 use crate::{
     chunk::{Chunk, OpCode},
     scanner::{Scanner, Token, TokenType},
+    value::Value,
 };
 
 pub struct Compiler<'a> {
@@ -63,6 +66,12 @@ impl<'a> Compiler<'a> {
         let line = self.previous().line();
         self.current_chunk().write(byte, line);
     }
+
+    fn emit_bytes(&mut self, byte1: impl Into<u8>, byte2: impl Into<u8>) {
+        self.emit_byte(byte1);
+        self.emit_byte(byte2);
+    }
+
     pub fn current(&self) -> &Token {
         self.current.as_ref().unwrap()
     }
@@ -125,7 +134,10 @@ impl<'a> Compiler<'a> {
 
         Ok(())
     }
-    pub fn expression() {}
+
+    fn expression(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
 
     fn end_compiler(&mut self) {
         self.emit_return();
@@ -133,5 +145,35 @@ impl<'a> Compiler<'a> {
 
     fn emit_return(&mut self) {
         self.emit_byte(OpCode::Return);
+    }
+
+    fn number(&mut self) {
+        let value = str::from_utf8(self.previous().ident())
+            .unwrap()
+            .parse::<f64>()
+            .unwrap();
+        self.emit_constant(Value::Double(value));
+    }
+
+    fn emit_constant(&mut self, value: Value) {
+        let constant = self.make_constant(value);
+        self.emit_bytes(OpCode::Constant, constant);
+    }
+
+    fn make_constant(&mut self, value: Value) -> u8 {
+        let constant = self.current_chunk().add_constant(value);
+        if constant > u8::MAX as usize {
+            self.error("Too many constants in one chunk.");
+            0
+        } else {
+            constant.try_into().unwrap()
+        }
+    }
+
+    fn grouping(&mut self) -> anyhow::Result<()> {
+        self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
+
+        Ok(())
     }
 }
